@@ -7,8 +7,17 @@ services:
 #    ports:
 #      - "1883:1883"
 #      - "18083:18083" #Probably not needed
-#    enviroment:
+#    environment:
 #      EMQX_NAME: emqx
+
+#  grafana:
+#    image: grafana/grafana:latest
+#    ports:
+#      - "3000:3000"
+#    depends_on:
+#      - questdb
+#    volumes:
+#      - grafana_data:/var/lib/grafana
 
   questdb:
     image: questdb/questdb:latest
@@ -16,32 +25,28 @@ services:
       - "9000:9000"
       - "8812:8812"
       - "9009:9009"
+    environment:
+      QDB_PG_USER: admin
+      QDB_PG_PASSWORD: quest
     volumes:
       - questdb_data:/var/lib/questdb
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    depends_on:
-      - questdb
-    volumes:
-      - grafana_data:/var/lib/grafana
     
   questdb-init:
-    image: questdb/questdb:latest
+    image: postgres:16
     depends_on:
       - questdb
+    environment:
+      PGPASSWORD: quest
     volumes:
       - ./questdb/init.sql:/init.sql
     entrypoint: >
       bash -c "
-      until /questdb/bin/psql -h questdb -p 8812 -U admin -d qdb -c '\l'; do
+      until pg_isready -h questdb -p 8812; do
         echo "Waiting..."
         sleep 2
       done
       
-      /questdb/bin/psql -h questdb -p 8812 -U admin -d qdb -f /init.sql
+      psql -h questdb -p 8812 -U admin -d qdb -f /init.sql
       "
 
 volumes:
