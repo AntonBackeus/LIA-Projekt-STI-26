@@ -1,15 +1,15 @@
 version: "3.9"
 
 services:
-  emqx:
-    image: emqx/emqx:latest
-    container_name: emqx
-    ports:
-      - "1883:1883"
-      - "18083:18083" #Probably not needed
-    enviroment:
-      EMQX_NAME: emqx
-      
+#  emqx:
+#    image: emqx/emqx:latest
+#    container_name: emqx
+#    ports:
+#      - "1883:1883"
+#      - "18083:18083" #Probably not needed
+#    enviroment:
+#      EMQX_NAME: emqx
+
   questdb:
     image: questdb/questdb:latest
     ports:
@@ -27,6 +27,22 @@ services:
       - questdb
     volumes:
       - grafana_data:/var/lib/grafana
+    
+  questdb-init:
+    image: questdb/questdb:latest
+    depends_on:
+      - questdb
+    volumes:
+      - ./questdb/init.sql:/init.sql
+    entrypoint: >
+      bash -c "
+      until /questdb/bin/psql -h questdb -p 8812 -U admin -d qdb -c '\l'; do
+        echo "Waiting..."
+        sleep 2
+      done
+      
+      /questdb/bin/psql -h questdb -p 8812 -U admin -d qdb -f /init.sql
+      "
 
 volumes:
   questdb_data:
