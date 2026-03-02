@@ -8,4 +8,4 @@ while True:
     value = random.randint(0, 100)
     line = f"test_data value={value}\n"
     sock.sendall(line.encode())
-    time.sleep(1)
+    time.sleep(1) 
