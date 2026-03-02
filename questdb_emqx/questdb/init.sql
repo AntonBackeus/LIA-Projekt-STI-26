@@ -3,3 +3,10 @@ CREATE TABLE IF NOT EXISTS test_data (
     value DOUBLE
 ) TIMESTAMP(ts)
 PARTITION BY DAY;
+
+CREATE TABLE IF NOT EXISTS component (
+    componentID LONG,
+    serialnumber STRING,
+    model STRING,
+    PRIMARY KEY (componentID)
+);
