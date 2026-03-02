@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  questdb:
+    image: questdb/questdb:latest
+    ports:
+      - "9000:9000"
+      - "8812:8812"
+      - "9009:9009"
+    volumes:
+      - questdb_data:/var/lib/questdb
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    depends_on:
+      - questdb
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+volumes:
+  questdb_data:
+  grafana_data:
