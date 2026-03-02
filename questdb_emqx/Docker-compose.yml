@@ -46,4 +46,4 @@ services:
 
 volumes:
   questdb_data:
-  grafana_data:
+  grafana_data: 

@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS test_data (
+    ts TIMESTAMP,
+    value DOUBLE
+) TIMESTAMP(ts)
+PARTITION BY DAY;
