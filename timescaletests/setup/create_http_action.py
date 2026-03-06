@@ -6,7 +6,7 @@ from requests.auth import HTTPBasicAuth
 EMQX_HOST = os.getenv("EMQX_HOST", "emqx")
 EMQX_PORT = int(os.getenv("EMQX_PORT", 18083))
 EMQX_USER = os.getenv("EMQX_USER", "admin")
-EMQX_PASS = os.getenv("EMQX_PASS", "secret")
+EMQX_PASS = os.getenv("EMQX_PASS", "strongpassword")
 INGESTION_URL = os.getenv("INGESTION_URL", "http://ingestion:8000/events")
 
 BASE_URL = f"http://{EMQX_HOST}:{EMQX_PORT}/api/v5"
