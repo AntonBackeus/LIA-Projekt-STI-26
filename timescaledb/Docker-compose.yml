@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   timescaledb:
-    image: timescale/timescaledb:latest-pg15
+    image: timescale/timescaledb:latest-pg14
     container_name: timescaledb
     ports:
       - "5432:5432"
@@ -15,7 +15,7 @@ services:
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   emqx:
-    image: emqx/emqx:5.1
+    image: emqx/emqx-enterprise:latest
     container_name: emqx
     ports:
       - "1883:1883"     # MQTT
@@ -25,10 +25,30 @@ services:
       EMQX_DASHBOARD__DEFAULT_PASSWORD: strongpassword
     volumes:
       - emqx_data:/opt/emqx/data
-      - ./emqx/etc/emqx.conf:/opt/emqx/etc/emqx.conf
-      
+#      - ./emqx/etc/emqx.conf:/opt/emqx/etc/emqx.conf
     depends_on:
       - timescaledb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18083/status"]
+      interval: 5s
+      retries: 20
+
+  setup:
+    build: ./setup
+    container_name: emqx_setup
+    depends_on:
+      - emqx
+    environment:
+      EMQX_HOST: emqx
+      EMQX_PORT: 18083
+      EMQX_USER: admin
+      EMQX_PASS: secret
+      DB_HOST: timescaledb
+      DB_PORT: 5432
+      DB_NAME: appdb
+      DB_USER: admin
+      DB_PASS: secret
+    entrypoint: ["python", "/app/app.py"]
 
 volumes:
   timescale_data:

@@ -18,12 +18,11 @@ CREATE TABLE IF NOT EXISTS event_data (
     ts TIMESTAMPTZ NOT NULL,
     component_id BIGINT NOT NULL,
     temperature DOUBLE PRECISION,
-    humidity DOUBLE PRECISION,
-    payload JSONB,
-    CONSTRAINT fk_component
-        FOREIGN KEY(component_id)
-        REFERENCES component(component_id)
-        ON DELETE CASCADE
+    humidity DOUBLE PRECISION
+--    CONSTRAINT fk_component
+--        FOREIGN KEY(component_id)
+--        REFERENCES component(component_id)
+--        ON DELETE CASCADE
 );
 
 -- Convert to hypertable
