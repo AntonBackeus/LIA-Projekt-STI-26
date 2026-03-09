@@ -40,9 +40,9 @@ services:
       retries: 20
 
   paho:
-    image: ./etl
+    build: ./etl
     container_name: paho
-    enviroment:
+    environment:
       DB_HOST: timescaledb
       DB_PORT: 5432
       DB_NAME: appdb

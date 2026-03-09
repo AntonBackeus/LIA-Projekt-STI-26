@@ -1,105 +1,78 @@
-# Importerar bibliotek för miljövariabler, JSON-hantering, MQTT och PostgreSQL
 import os
 import json
 import paho.mqtt.client as mqtt
 import psycopg2
- 
- 
-# Hämtar MQTT-host från environment variabel.
-# Om variabeln inte finns används standardvärdet "emqx"
+
+
+# MQTT konfiguration från environment variables
 MQTT_HOST = os.getenv("MQTT_HOST", "emqx")
- 
-# Hämtar MQTT-port från environment variabel.
-# Standardporten för MQTT är 1883.
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
- 
- 
-# Skapar en anslutning till TimescaleDB (PostgreSQL)
 
-# Alla värden läses från environment variabler som sätts i docker-compose
 
+# Databasanslutning
 conn = psycopg2.connect(
-
-    host=os.getenv("DB_HOST"),        # Databasens host (container-namn i Docker)
-
-    database=os.getenv("DB_NAME"),    # Databasnamn
-
-    user=os.getenv("DB_USER"),        # Databasanvändare
-
-    password=os.getenv("DB_PASS"),     # Databaslösenord
-
-    port=int(os.getenv("DB_PORT", 5432)) # Databasport, standard är 5432
-
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASS"),
+    port=int(os.getenv("DB_PORT", 5432))
 )
- 
-# Skapar en cursor som används för att köra SQL-kommandon
 
 cursor = conn.cursor()
- 
- 
-# Callback-funktion som körs när klienten ansluter till MQTT-brokern
 
+
+# Körs när MQTT-klienten ansluter till brokern
 def on_connect(client, userdata, flags, rc):
- 
-    # Skriver ut status i loggen
 
-    print("Connected to MQTT")
- 
-    # Börjar prenumerera på alla topics under "sensors/"
+    if rc == 0:
+        print("Connected to MQTT")
 
-    # '#' betyder wildcard (alla undertopics)
+        # Prenumererar på topics med QoS 2
+        client.subscribe("sensors/#", qos=2)
 
-    client.subscribe("sensors/#")
- 
- 
-# Callback-funktion som körs varje gång ett MQTT-meddelande tas emot
+    else:
+        print("Connection failed:", rc)
 
+
+# Körs varje gång ett MQTT-meddelande tas emot
 def on_message(client, userdata, msg):
- 
-    # MQTT payload kommer som bytes → dekodas till string → konverteras till JSON
 
-    payload = json.loads(msg.payload.decode())
- 
-    # Kör en SQL INSERT för att lagra datan i databasen
+    try:
+        payload = json.loads(msg.payload.decode())
 
-    cursor.execute(
+        cursor.execute(
+            "INSERT INTO sensor_data (time, device_id, value) VALUES (NOW(), %s, %s)",
+            (payload["device"], payload["value"])
+        )
 
-        "INSERT INTO sensor_data (time, device_id, value) VALUES (NOW(), %s, %s)",
- 
-        # Hämtar värden från JSON payload
+        conn.commit()
 
-        # %s används för att undvika SQL injection
+        print("Stored message from", payload["device"])
 
-        (payload["device"], payload["value"])
+    except Exception as e:
+        print("Error processing message:", e)
+        conn.rollback()
 
-    )
- 
-    # Sparar ändringen i databasen
 
-    conn.commit()
- 
- 
-# Skapar en MQTT-klient
+# Skapar MQTT-klient med persistent session
+client = mqtt.Client(
+    client_id="timescale_subscriber",   # måste vara konstant
+    clean_session=False                 # gör att broker sparar QoS-meddelanden
+)
 
-client = mqtt.Client()
- 
-# Kopplar callback-funktionerna till klienten
 
+# Automatisk reconnect
+client.reconnect_delay_set(min_delay=1, max_delay=30)
+
+
+# Koppla callbacks
 client.on_connect = on_connect
-
 client.on_message = on_message
- 
- 
-# Ansluter till MQTT-brokern
 
-# 60 = keepalive (sekunder)
 
+# Anslut till broker
 client.connect(MQTT_HOST, MQTT_PORT, 60)
- 
- 
-# Startar en loop som håller klienten igång
 
-# Den väntar på nya MQTT-meddelanden kontinuerligt
 
+# Starta klientens loop
 client.loop_forever()
- 

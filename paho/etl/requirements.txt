@@ -1,2 +1,2 @@
-paho
-psycopg2
+paho-mqtt
+psycopg2-binary
