@@ -3,11 +3,13 @@ import time
 import requests
 from requests.auth import HTTPBasicAuth
 
-EMQX_HOST = os.getenv("EMQX_HOST", "emqx")
+EMQX_HOST = os.getenv("EMQX_HOST", "localhost")
 EMQX_PORT = int(os.getenv("EMQX_PORT", 18083))
 EMQX_USER = os.getenv("EMQX_USER", "admin")
 EMQX_PASS = os.getenv("EMQX_PASS", "strongpassword")
 INGESTION_URL = os.getenv("INGESTION_URL", "http://ingestion:8000/events")
+EMQX_API_KEY = os.getenv("EMQX_API_KEY", "backend")
+EMQX_API_SECRET = os.getenv("EMQX_API_SECRET", "supersecret")
 
 BASE_URL = f"http://{EMQX_HOST}:{EMQX_PORT}/api/v5"
 
@@ -15,7 +17,7 @@ def wait_emqx():
     print("Waiting for EMQX to be ready...")
     while True:
         try:
-            r = requests.get(f"{BASE_URL}/status", auth=HTTPBasicAuth(EMQX_USER, EMQX_PASS))
+            r = requests.get(f"{BASE_URL}/status", auth=HTTPBasicAuth('backend', 'supersecret'))
             if r.status_code == 200:
                 print("EMQX ready!")
                 return

@@ -30,12 +30,10 @@ services:
       EMQX_DASHBOARD__DEFAULT_USERNAME: admin
       EMQX_DASHBOARD__DEFAULT_PASSWORD: strongpassword
 
-      EMQX_API_KEY__BOOTSTRAP__1__API_KEY: backend
-      EMQX_API_KEY__BOOTSTRAP__1__SECRET: supersecret
-      EMQX_API_KEY__BOOTSTRAP__1__ROLE: administrator
-      EMQX_API_KEY__BOOTSTRAP__1__DESC: backend-services
     volumes:
       - emqx_data:/opt/emqx/data
+      - emqx_logs:/opt/emqx/log
+      - ./api_keys.conf:/opt/emqx/etc/api_keys.conf:ro
 #      - ./emqx/etc/emqx.conf:/opt/emqx/etc/emqx.conf
     depends_on:
       - timescaledb
@@ -43,6 +41,16 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:18083/status"]
       interval: 5s
       retries: 20
+    command: >
+      sh -c "
+      /opt/emqx/bin/emqx start;
+      echo 'Waiting for EMQX...';
+      sleep 10;
+      echo '=== API KEYS ===';
+      /opt/emqx/bin/emqx_ctl api_key list;
+      echo '===============';
+      tail -f /opt/emqx/log/*;
+      "
 
   setup:
     build: ./setup
@@ -75,3 +83,4 @@ services:
 volumes:
   timescale_data:
   emqx_data:
+  emqx_logs:
