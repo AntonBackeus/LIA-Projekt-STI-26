@@ -41,8 +41,8 @@ def on_message(client, userdata, msg):
         payload = json.loads(msg.payload.decode())
 
         cursor.execute(
-            "INSERT INTO sensor_data (time, device_id, value) VALUES (NOW(), %s, %s)",
-            (payload["device"], payload["value"])
+            "INSERT INTO event_data (ts, component_id, temperature, humidity) VALUES (%s, %s, %s, %s)",
+            (payload["timestamp"], payload["device"], payload["temperature"], payload["humidity"])
         )
 
         conn.commit()

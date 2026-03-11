@@ -1,9 +1,7 @@
-version: "3.8"
-
 services:
   timescaledb:
     image: timescale/timescaledb:latest-pg14
-    container_name: timescaledb
+    container_name: timescaledb2
     ports:
       - "5432:5432"
     environment:
@@ -22,7 +20,7 @@ services:
 
   emqx:
     image: emqx/emqx-enterprise:latest
-    container_name: emqx
+    container_name: emqx2
     ports:
       - "1883:1883"     # MQTT
       - "18083:18083"   # EMQX dashboard
@@ -53,6 +51,30 @@ services:
     depends_on:
       emqx:
         condition: service_healthy
+
+#  mqtt-test-publisher:
+#    image: alpine:3.19
+#    depends_on:
+#      - emqx
+#    entrypoint: >
+#      sh -c "
+#      apk add --no-cache mosquitto-clients jq coreutils;
+#      sleep 5;
+#      while true; do
+#        TS=$(date -u +%Y-%m-%dT%H:%M:%SZ);
+#
+#        TEMP=$$(awk -v min=19 -v max=25 'BEGIN{srand(); print min+rand()*(max-min)}');
+#        HUM=$$(awk -v min=30 -v max=60 'BEGIN{srand(); print min+rand()*(max-min)}');
+#
+#        PAYLOAD=$$(jq -n --arg ts \"$$TS\" --argjson temp $$TEMP --argjson hum $$HUM '{timestamp:$$ts,device:1,temperature:$$temp,humidity:$$hum}');
+#
+#        mosquitto_pub -h emqx -p 1883 -t sensors/room1 -m \"$$PAYLOAD\";
+#
+#        echo \"Published: $$PAYLOAD\";
+#
+#        sleep 2;
+#      done
+#      "
 
 
 volumes:
