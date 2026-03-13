@@ -76,8 +76,21 @@ services:
 #      done
 #      "
 
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    restart: unless-stopped
+    depends_on:
+      - timescaledb
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./provisioning/datasources:/etc/grafana/provisioning
+      - ./provisioning/dashboards:/var/lib/grafana/dashboards
 
 volumes:
   timescale_data:
   emqx_data:
   emqx_logs:
+  grafana-storage:

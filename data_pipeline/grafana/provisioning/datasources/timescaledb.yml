@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: Local Postgres
+    type: postgres
+    access: proxy
+    url: timescaledb:5432
+    database: appdb
+    user: admin
+    secureJsonData:
+      password: secret
+    jsonData:
+      sslmode: disable
+      postgresVersion: 1500
+      timescaledb: true
+      maxOpenConns: 100
+      maxIdleConns: 100
