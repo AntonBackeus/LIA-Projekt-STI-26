@@ -11,7 +11,8 @@ datasources:
       password: secret
     jsonData:
       sslmode: disable
-      postgresVersion: 1500
+      postgresVersion: 1400
       timescaledb: true
+      schema: public
       maxOpenConns: 100
       maxIdleConns: 100

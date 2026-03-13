@@ -52,42 +52,43 @@ services:
       emqx:
         condition: service_healthy
 
-#  mqtt-test-publisher:
-#    image: alpine:3.19
-#    depends_on:
-#      - emqx
-#    entrypoint: >
-#      sh -c "
-#      apk add --no-cache mosquitto-clients jq coreutils;
-#      sleep 5;
-#      while true; do
-#        TS=$(date -u +%Y-%m-%dT%H:%M:%SZ);
-#
-#        TEMP=$$(awk -v min=19 -v max=25 'BEGIN{srand(); print min+rand()*(max-min)}');
-#        HUM=$$(awk -v min=30 -v max=60 'BEGIN{srand(); print min+rand()*(max-min)}');
-#
-#        PAYLOAD=$$(jq -n --arg ts \"$$TS\" --argjson temp $$TEMP --argjson hum $$HUM '{timestamp:$$ts,device:1,temperature:$$temp,humidity:$$hum}');
-#
-#        mosquitto_pub -h emqx -p 1883 -t sensors/room1 -m \"$$PAYLOAD\";
-#
-#        echo \"Published: $$PAYLOAD\";
-#
-#        sleep 2;
-#      done
-#      "
+  mqtt-test-publisher:
+    image: alpine:3.19
+    depends_on:
+      - emqx
+    entrypoint: >
+      sh -c "
+      apk add --no-cache mosquitto-clients jq coreutils;
+      sleep 5;
+      while true; do
+        TS=$(date -u +%Y-%m-%dT%H:%M:%SZ);
+
+        TEMP=$$(awk -v min=19 -v max=25 'BEGIN{srand(); print min+rand()*(max-min)}');
+        HUM=$$(awk -v min=30 -v max=60 'BEGIN{srand(); print min+rand()*(max-min)}');
+
+        PAYLOAD=$$(jq -n --arg ts \"$$TS\" --argjson temp $$TEMP --argjson hum $$HUM '{timestamp:$$ts,device:1,temperature:$$temp,humidity:$$hum}');
+
+        mosquitto_pub -h emqx -p 1883 -t sensors/room1 -m \"$$PAYLOAD\";
+
+        echo \"Published: $$PAYLOAD\";
+
+        sleep 2;
+      done
+      "
 
   grafana:
     image: grafana/grafana:10.4.2
     container_name: grafana
     restart: unless-stopped
     depends_on:
-      - timescaledb
+      timescaledb:
+        condition: service_healthy
     ports:
       - "3000:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
-      - ./provisioning/datasources:/etc/grafana/provisioning
-      - ./provisioning/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/provisioning/:/etc/grafana/provisioning
+      - ./grafana/dashboard-json:/var/lib/grafana/dashboards
 
 volumes:
   timescale_data:
