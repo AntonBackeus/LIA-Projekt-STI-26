@@ -1,7 +1,7 @@
 services:
   timescaledb:
     image: timescale/timescaledb:latest-pg14
-    container_name: timescaledb2
+    container_name: timescaledb
     ports:
       - "5432:5432"
     environment:
@@ -20,7 +20,7 @@ services:
 
   emqx:
     image: emqx/emqx-enterprise:latest
-    container_name: emqx2
+    container_name: emqx
     ports:
       - "1883:1883"     # MQTT
       - "18083:18083"   # EMQX dashboard
@@ -54,6 +54,7 @@ services:
 
   mqtt-test-publisher:
     image: alpine:3.19
+    container_name: mosquitto
     depends_on:
       - emqx
     entrypoint: >
