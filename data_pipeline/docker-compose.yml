@@ -3,11 +3,11 @@ services:
     image: timescale/timescaledb:latest-pg14
     container_name: timescaledb
     ports:
-      - "5432:5432"
+      - ${DB_PORT}:${DB_PORT}
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: secret
-      POSTGRES_DB: appdb
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -22,11 +22,11 @@ services:
     image: emqx/emqx-enterprise:latest
     container_name: emqx
     ports:
-      - "1883:1883"     # MQTT
-      - "18083:18083"   # EMQX dashboard
+      - ${MQTT_PORT}:${MQTT_PORT}     # MQTT
+      - ${DASH_PORT}:${DASH_PORT}   # EMQX dashboard
     environment:
-      EMQX_DASHBOARD__DEFAULT_USERNAME: admin
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: strongpassword
+      EMQX_DASHBOARD__DEFAULT_USERNAME: ${MQTT_USER}
+      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_PASS}
     volumes:
       - emqx_data:/opt/emqx/data
       - emqx_logs:/opt/emqx/log
@@ -41,13 +41,13 @@ services:
     build: ./etl
     container_name: paho
     environment:
-      DB_HOST: timescaledb
-      DB_PORT: 5432
-      DB_NAME: appdb
-      DB_USER: admin
-      DB_PASS: secret
-      MQTT_HOST: emqx
-      MQTT_PORT: 1883
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      MQTT_HOST: ${MQTT_HOST}
+      MQTT_PORT: ${MQTT_PORT}
     depends_on:
       emqx:
         condition: service_healthy
@@ -69,7 +69,7 @@ services:
 
         PAYLOAD=$$(jq -n --arg ts \"$$TS\" --argjson temp $$TEMP --argjson hum $$HUM '{timestamp:$$ts,device:1,temperature:$$temp,humidity:$$hum}');
 
-        mosquitto_pub -h emqx -p 1883 -t sensors/room1 -m \"$$PAYLOAD\";
+        mosquitto_pub -h emqx -p $MQTT_PORT -t sensors/room1 -m \"$$PAYLOAD\";
 
         echo \"Published: $$PAYLOAD\";
 
@@ -80,12 +80,14 @@ services:
   grafana:
     image: grafana/grafana:10.4.2
     container_name: grafana
+    env_file:
+      - ./.env
     restart: unless-stopped
     depends_on:
       timescaledb:
         condition: service_healthy
     ports:
-      - "3000:3000"
+      - ${GRAFANA_PORT}:${GRAFANA_PORT}
     volumes:
       - grafana-storage:/var/lib/grafana
       - ./grafana/provisioning/:/etc/grafana/provisioning

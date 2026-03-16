@@ -7,6 +7,8 @@ import psycopg2
 # MQTT konfiguration från environment variables
 MQTT_HOST = os.getenv("MQTT_HOST", "emqx")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
+DATA_TOPIC = os.getenv("DATA_TOPIC")
+CLIENT_ID = os.getenv("CLIENT_ID")
 
 
 # Databasanslutning
@@ -28,7 +30,7 @@ def on_connect(client, userdata, flags, rc):
         print("Connected to MQTT")
 
         # Prenumererar på topics med QoS 2
-        client.subscribe("sensors/#", qos=2)
+        client.subscribe(DATA_TOPIC, qos=2)
 
     else:
         print("Connection failed:", rc)
@@ -56,8 +58,8 @@ def on_message(client, userdata, msg):
 
 # Skapar MQTT-klient med persistent session
 client = mqtt.Client(
-    client_id="timescale_subscriber",   # måste vara konstant
-    clean_session=False                 # gör att broker sparar QoS-meddelanden
+    client_id=CLIENT_ID,   # måste vara konstant
+    clean_session=False    # gör att broker sparar QoS-meddelanden
 )
 
 
