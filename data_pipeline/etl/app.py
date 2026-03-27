@@ -1,11 +1,11 @@
-import os                     # För environment variables
-import psycopg2               # PostgreSQL-anslutning
-import random
-import time
-from datetime import datetime, timezone
+import os                                   # Used to import environment variables
+import psycopg2                             # Used to connect to PostgreSQL database
+import random                               # Can be removed once fake data generation is removed
+import time                                 # Can be removed once fake data generation is removed
+from datetime import datetime, timezone     # Used to get current timestamp
 
 
-# Databasanslutning
+# PostgreSQL connection setup using environment variables
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
     database=os.getenv("DB_NAME"),
@@ -14,13 +14,13 @@ conn = psycopg2.connect(
     port=int(os.getenv("DB_PORT", 5432))
 )
 
-cursor = conn.cursor()  # Cursor för SQL
+cursor = conn.cursor()  # Connector variable for executing SQL commands
 
 
-# Denna funktion innehåller all logik för att spara data i databasen
-# Kan anropas direkt utan MQTT
+# Example function to process incoming messages and store them in the database
 def process_message(payload):
     try:
+        # Insert the data into the database, modify to match the new table structure and column names later
         cursor.execute(
             "INSERT INTO event_data (ts, component_id, temperature, humidity) VALUES (%s, %s, %s, %s)",
             (
@@ -30,17 +30,18 @@ def process_message(payload):
                 payload["humidity"]
             )
         )
-        conn.commit()
+        conn.commit() # Saves the changes to the database
 
-        print("Stored message from", payload["device"])
+        print("Stored message from", payload["device"]) #Keep for logging, can help a future user debug
 
     except Exception as e:
-        print("Error processing message:", e)
-        conn.rollback()
+        print("Error processing message:", e) #Keep for logging, can help a future user debug
+        conn.rollback() # Reverts the changes to the database because of the error
 
 
 
-def main():
+def main(): # Data generation test, remove once IOT function is working and sorting algorithm is implemented
+            # Sorting algorithm might need to insert a timestamp to the message and format it into a dict if AUT doesnt solve it
     container_id = 1
     while True:
         data = {

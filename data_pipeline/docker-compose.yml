@@ -1,17 +1,17 @@
 services:
-  timescaledb:
-    image: timescale/timescaledb:latest-pg14
+  timescaledb: #Time series database, usefull for sensor/event data
+    image: timescale/timescaledb:latest-pg14 #Match version (pg14) to PROVISIONING_POSTGRES_VERSION in env
     container_name: timescaledb
     ports:
-      - ${DB_PORT}:${DB_PORT}
+      - ${DB_PORT}:${DB_PORT} #Keep as 5432 in env unless you have a good reason as that is standard postgres
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASS}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER} #Update value in env to match user preference, this will increase user security
+      POSTGRES_PASSWORD: ${DB_PASS} #Update value in env to match user preference, this will increase user security
+      POSTGRES_DB: ${DB_NAME} #Update value in env to match end user product for easier understanding
     volumes:
-      - timescale_data:/var/lib/postgresql/data
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
+      - timescale_data:/var/lib/postgresql/data #Saves data even when docker is down, do not change unless necessary
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql #What postgres uses to initialize database, modify file for new schemas/tables
+    healthcheck: #Makes sure timescale starts correctly, used to allow other services to know when to start.
       test: ["CMD-SHELL", "pg_isready -U admin -d appdb"]
       interval: 10s
       timeout: 5s
@@ -19,36 +19,36 @@ services:
       start_period: 15s
 
 
-  etl:
-    build: ./etl
+  etl: #The data ingestion tool, self built. Change in etl/app.py for new functionality
+    build: ./etl #Do not change, shows where the etl is located
     container_name: etl
-    environment:
+    environment: #Variables needed to connect to timescale in the ingestion app. Do not change unless familiar with that code
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-    depends_on:
+    depends_on: #Makes sure it only start once timescale is active, needed because it will connect to timescale at the start
       timescaledb:
         condition: service_healthy
 
 
-  grafana:
+  grafana: #Time series dashboard, might need a second instance to allow both a local dashboard for status updates and one for informing staff of statistics and similar
     image: grafana/grafana:10.4.2
     container_name: grafana
-    env_file:
+    env_file: #Needed since grafana provisioning needs env data and cant read without this. DO NOT CHANGE
       - ./.env
-    restart: unless-stopped
-    depends_on:
+    restart: unless-stopped #Might be excessive since the other two dont use it. Could be worth looking up if it should be removed or implemented in the other two as well
+    depends_on: #Makes sure it only start once timescale is active, needed because it will connect to timescale at the start 
       timescaledb:
         condition: service_healthy
     ports:
-      - ${GRAFANA_PORT}:${GRAFANA_PORT}
+      - ${GRAFANA_PORT}:${GRAFANA_PORT} #Which port to open grafana on, standard is 3000 but if a second instance is used the other needs another port
     volumes:
-      - grafana-storage:/var/lib/grafana
-      - ./grafana/provisioning/:/etc/grafana/provisioning
-      - ./grafana/dashboard-json:/var/lib/grafana/dashboards
+      - grafana-storage:/var/lib/grafana #Saves states and internal data between runs, only change if you are sure it is needed
+      - ./grafana/provisioning/:/etc/grafana/provisioning #Tells grafana where to find configuration files. Do not change second half and only change first when moving the provisioning folder
+      - ./grafana/dashboard-json:/var/lib/grafana/dashboards #Tells grafana where to find our dashboard. Make sure first half match dashboard folder and second part match setting in provisioning
 
-volumes:
+volumes: #Stores data between runs, dont remove unless familiar with reasoning
   timescale_data:
   grafana-storage:
