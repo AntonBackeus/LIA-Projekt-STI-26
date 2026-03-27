@@ -1,17 +1,11 @@
-import os
-import json
-import paho.mqtt.client as mqtt
-import psycopg2
+import os                                   # Used to import environment variables
+import psycopg2                             # Used to connect to PostgreSQL database
+import random                               # Can be removed once fake data generation is removed
+import time                                 # Can be removed once fake data generation is removed
+from datetime import datetime, timezone     # Used to get current timestamp
 
 
-# MQTT konfiguration från environment variables
-MQTT_HOST = os.getenv("MQTT_HOST", "emqx")
-MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-DATA_TOPIC = os.getenv("DATA_TOPIC")
-CLIENT_ID = os.getenv("CLIENT_ID")
-
-
-# Databasanslutning
+# PostgreSQL connection setup using environment variables
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
     database=os.getenv("DB_NAME"),
@@ -20,61 +14,43 @@ conn = psycopg2.connect(
     port=int(os.getenv("DB_PORT", 5432))
 )
 
-cursor = conn.cursor()
+cursor = conn.cursor()  # Connector variable for executing SQL commands
 
 
-# Körs när MQTT-klienten ansluter till brokern
-def on_connect(client, userdata, flags, rc):
-
-    if rc == 0:
-        print("Connected to MQTT")
-
-        # Prenumererar på topics med QoS 2
-        client.subscribe(DATA_TOPIC, qos=2)
-
-    else:
-        print("Connection failed:", rc)
-
-
-# Körs varje gång ett MQTT-meddelande tas emot
-def on_message(client, userdata, msg):
-
+# Example function to process incoming messages and store them in the database
+def process_message(payload):
     try:
-        payload = json.loads(msg.payload.decode())
-
+        # Insert the data into the database, modify to match the new table structure and column names later
         cursor.execute(
             "INSERT INTO event_data (ts, component_id, temperature, humidity) VALUES (%s, %s, %s, %s)",
-            (payload["timestamp"], payload["device"], payload["temperature"], payload["humidity"])
+            (
+                payload["timestamp"],
+                payload["device"],
+                payload["temperature"],
+                payload["humidity"]
+            )
         )
+        conn.commit() # Saves the changes to the database
 
-        conn.commit()
-
-        print("Stored message from", payload["device"])
+        print("Stored message from", payload["device"]) #Keep for logging, can help a future user debug
 
     except Exception as e:
-        print("Error processing message:", e)
-        conn.rollback()
+        print("Error processing message:", e) #Keep for logging, can help a future user debug
+        conn.rollback() # Reverts the changes to the database because of the error
 
 
-# Skapar MQTT-klient med persistent session
-client = mqtt.Client(
-    client_id=CLIENT_ID,   # måste vara konstant
-    clean_session=False    # gör att broker sparar QoS-meddelanden
-)
 
+def main(): # Data generation test, remove once IOT function is working and sorting algorithm is implemented
+            # Sorting algorithm might need to insert a timestamp to the message and format it into a dict if AUT doesnt solve it
+    container_id = 1
+    while True:
+        data = {
+            "device": container_id,
+            "timestamp": datetime.now(timezone.utc),
+            "temperature": round(random.uniform(18.0,25.0),2),
+            "humidity": round(random.uniform(30.0,60.0),2)
+        }
+        process_message(data)
+        time.sleep(1)
 
-# Automatisk reconnect
-client.reconnect_delay_set(min_delay=1, max_delay=30)
-
-
-# Koppla callbacks
-client.on_connect = on_connect
-client.on_message = on_message
-
-
-# Anslut till broker
-client.connect(MQTT_HOST, MQTT_PORT, 60)
-
-
-# Starta klientens loop
-client.loop_forever()
+main()
