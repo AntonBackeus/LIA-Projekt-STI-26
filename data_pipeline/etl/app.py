@@ -1,11 +1,13 @@
-import os                                   # Used to import environment variables
-import psycopg2                             # Used to connect to PostgreSQL database
-import random                               # Can be removed once fake data generation is removed
-import time                                 # Can be removed once fake data generation is removed
-from datetime import datetime, timezone     # Used to get current timestamp
+import os
+import psycopg2
+import random
+import time
+from datetime import datetime, timezone
 
 
-# PostgreSQL connection setup using environment variables
+# ----------------------------
+# Database connection
+# ----------------------------
 conn = psycopg2.connect(
     host=os.getenv("DB_HOST"),
     database=os.getenv("DB_NAME"),
@@ -14,43 +16,80 @@ conn = psycopg2.connect(
     port=int(os.getenv("DB_PORT", 5432))
 )
 
-cursor = conn.cursor()  # Connector variable for executing SQL commands
+cursor = conn.cursor()
 
 
-# Example function to process incoming messages and store them in the database
+# ----------------------------
+# CONNECTOR
+# ----------------------------
+def connector():
+    """
+    Simulerar IoT-data i dictionary-format
+    """
+    return {
+        "type": random.choice(["TEMP", "HUM"]),
+        "value": round(random.uniform(20, 30), 2),
+        "timestamp": datetime.now(timezone.utc),
+        "device": 1
+    }
+
+
+# ----------------------------
+# HANDLE MESSAGE (NY)
+# ----------------------------
+def handle_message(message):
+
+    if message["type"] == "TEMP":
+        print("Temperature:", message["value"])
+
+    elif message["type"] == "HUM":
+        print("Humidity:", message["value"])
+
+    else:
+        print("Unknown message:", message)
+
+
+# ----------------------------
+# PROCESS MESSAGE (samma som innan)
+# ----------------------------
 def process_message(payload):
     try:
-        # Insert the data into the database, modify to match the new table structure and column names later
         cursor.execute(
             "INSERT INTO event_data (ts, component_id, temperature, humidity) VALUES (%s, %s, %s, %s)",
             (
                 payload["timestamp"],
                 payload["device"],
-                payload["temperature"],
-                payload["humidity"]
+                payload.get("value") if payload["type"] == "TEMP" else None,
+                payload.get("value") if payload["type"] == "HUM" else None
             )
         )
-        conn.commit() # Saves the changes to the database
+        conn.commit()
 
-        print("Stored message from", payload["device"]) #Keep for logging, can help a future user debug
+        print("Stored message")
 
     except Exception as e:
-        print("Error processing message:", e) #Keep for logging, can help a future user debug
-        conn.rollback() # Reverts the changes to the database because of the error
+        print("Error:", e)
+        conn.rollback()
 
 
-
-def main(): # Data generation test, remove once IOT function is working and sorting algorithm is implemented
-            # Sorting algorithm might need to insert a timestamp to the message and format it into a dict if AUT doesnt solve it
-    container_id = 1
+# ----------------------------
+# MAIN
+# ----------------------------
+def main():
     while True:
-        data = {
-            "device": container_id,
-            "timestamp": datetime.now(timezone.utc),
-            "temperature": round(random.uniform(18.0,25.0),2),
-            "humidity": round(random.uniform(30.0,60.0),2)
-        }
-        process_message(data)
+        message = connector()
+
+        print("Från connector:", message)
+
+        handle_message(message)
+
+        process_message(message)
+
         time.sleep(1)
 
-main()
+
+# ----------------------------
+# START
+# ----------------------------
+if __name__ == "__main__":
+    main()
