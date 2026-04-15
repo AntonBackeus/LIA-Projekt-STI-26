@@ -1,14 +1,8 @@
-import os
-import json
-import paho.mqtt.client as mqtt
-import psycopg2
-
-
-# MQTT konfiguration från environment variables
-MQTT_HOST = os.getenv("MQTT_HOST", "emqx")
-MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-DATA_TOPIC = os.getenv("DATA_TOPIC")
-CLIENT_ID = os.getenv("CLIENT_ID")
+import os                     # För environment variables
+import psycopg2               # PostgreSQL-anslutning
+import random
+import time
+from datetime import datetime, timezone
 
 
 # Databasanslutning
@@ -20,33 +14,34 @@ conn = psycopg2.connect(
     port=int(os.getenv("DB_PORT", 5432))
 )
 
-cursor = conn.cursor()
+cursor = conn.cursor()  # Cursor för SQL
 
+# Connector 
+def connector():
+    """
+    Simulera data från robotarm.
+    Senare ersätts denna med riktigt IoT-data
+    """
+    return {
+        "device": 1,
+        "timestamp": datetime.now(timezone.utc),
+        "temperature": round(random.uniform(18.0, 25.0), 2),
+        "humidity": round(random.uniform(30.0, 60.0), 2)
+    }
 
-# Körs när MQTT-klienten ansluter till brokern
-def on_connect(client, userdata, flags, rc):
-
-    if rc == 0:
-        print("Connected to MQTT")
-
-        # Prenumererar på topics med QoS 2
-        client.subscribe(DATA_TOPIC, qos=2)
-
-    else:
-        print("Connection failed:", rc)
-
-
-# Körs varje gång ett MQTT-meddelande tas emot
-def on_message(client, userdata, msg):
-
+# Denna funktion innehåller all logik för att spara data i databasen
+# Kan anropas direkt utan MQTT
+def process_message(payload):
     try:
-        payload = json.loads(msg.payload.decode())
-
         cursor.execute(
             "INSERT INTO event_data (ts, component_id, temperature, humidity) VALUES (%s, %s, %s, %s)",
-            (payload["timestamp"], payload["device"], payload["temperature"], payload["humidity"])
+            (
+                payload["timestamp"],
+                payload["device"],
+                payload["temperature"],
+                payload["humidity"]
+            )
         )
-
         conn.commit()
 
         print("Stored message from", payload["device"])
@@ -56,25 +51,18 @@ def on_message(client, userdata, msg):
         conn.rollback()
 
 
-# Skapar MQTT-klient med persistent session
-client = mqtt.Client(
-    client_id=CLIENT_ID,   # måste vara konstant
-    clean_session=False    # gör att broker sparar QoS-meddelanden
-)
 
+def main():
+    while True:
+        # HÄMTA DATA FRÅN CONNECTOR
+        data = connector()
 
-# Automatisk reconnect
-client.reconnect_delay_set(min_delay=1, max_delay=30)
+        # LOGGA (för test)
+        print("Från connector:", data)
 
+        # SKICKA TILL ETL
+        process_message(data)
 
-# Koppla callbacks
-client.on_connect = on_connect
-client.on_message = on_message
+        time.sleep()
 
-
-# Anslut till broker
-client.connect(MQTT_HOST, MQTT_PORT, 60)
-
-
-# Starta klientens loop
-client.loop_forever()
+main() 

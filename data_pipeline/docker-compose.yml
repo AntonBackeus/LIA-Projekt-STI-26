@@ -1,6 +1,7 @@
 services:
   timescaledb:
-    image: timescale/timescaledb:latest-pg14
+    image: timescale/timescaledb:2.19.3-pg14
+    platform: Linux/Arm64
     container_name: timescaledb
     ports:
       - ${DB_PORT}:${DB_PORT}
@@ -8,6 +9,9 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
+      TIMESCALEDB_TELEMETRY: off
+      TS_TUNE_MEMORY: 512MB
+
     volumes:
       - timescale_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -18,64 +22,18 @@ services:
       retries: 5
       start_period: 15s
 
-  emqx:
-    image: emqx/emqx-enterprise:latest
-    container_name: emqx
-    ports:
-      - ${MQTT_PORT}:${MQTT_PORT}     # MQTT
-      - ${DASH_PORT}:${DASH_PORT}   # EMQX dashboard
-    environment:
-      EMQX_DASHBOARD__DEFAULT_USERNAME: ${MQTT_USER}
-      EMQX_DASHBOARD__DEFAULT_PASSWORD: ${MQTT_PASS}
-    volumes:
-      - emqx_data:/opt/emqx/data
-      - emqx_logs:/opt/emqx/log
-    depends_on:
-      - timescaledb
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:18083/status"]
-      interval: 5s
-      retries: 20
-
-  paho:
+  etl:
     build: ./etl
-    container_name: paho
+    container_name: etl
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-      MQTT_HOST: ${MQTT_HOST}
-      MQTT_PORT: ${MQTT_PORT}
     depends_on:
-      emqx:
+      timescaledb:
         condition: service_healthy
-
-  mqtt-test-publisher:
-    image: alpine:3.19
-    container_name: mosquitto
-    depends_on:
-      - emqx
-    entrypoint: >
-      sh -c "
-      apk add --no-cache mosquitto-clients jq coreutils;
-      sleep 5;
-      while true; do
-        TS=$(date -u +%Y-%m-%dT%H:%M:%SZ);
-
-        TEMP=$$(awk -v min=19 -v max=25 'BEGIN{srand(); print min+rand()*(max-min)}');
-        HUM=$$(awk -v min=30 -v max=60 'BEGIN{srand(); print min+rand()*(max-min)}');
-
-        PAYLOAD=$$(jq -n --arg ts \"$$TS\" --argjson temp $$TEMP --argjson hum $$HUM '{timestamp:$$ts,device:1,temperature:$$temp,humidity:$$hum}');
-
-        mosquitto_pub -h emqx -p $MQTT_PORT -t sensors/room1 -m \"$$PAYLOAD\";
-
-        echo \"Published: $$PAYLOAD\";
-
-        sleep 2;
-      done
-      "
 
   grafana:
     image: grafana/grafana:10.4.2
@@ -95,6 +53,4 @@ services:
 
 volumes:
   timescale_data:
-  emqx_data:
-  emqx_logs:
   grafana-storage:
