@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 -- ----------------------------
 -- Time-Series Table
 -- ----------------------------
-CREATE TABLE IF NOT EXIST robot_data(
+CREATE TABLE IF NOT EXISTS robot_data(
     ts TIMESTAMPTZ NOT NULL,
     device_id INT NOT NULL,
 

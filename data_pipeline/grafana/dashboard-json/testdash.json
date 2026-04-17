@@ -110,7 +110,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts, humidity, temperature FROM  event_data WHERE component_id = 1;",
+          "rawSql": "SELECT ts, event_value FROM robot_data WHERE device_id = 1;",
           "refId": "A",
           "sql": {
             "columns": [
@@ -149,7 +149,7 @@
     "refresh_intervals": []
   },
   "timezone": "browser",
-  "title": "TestDash Copy",
+  "title": "TestDash Test",
   "uid": "effvxlo78sidce",
   "version": 2,
   "weekStart": ""
