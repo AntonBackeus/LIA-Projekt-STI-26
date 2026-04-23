@@ -6,6 +6,19 @@ import re
 HOST = '0.0.0.0' # Lyssnar på alla nätverksgränssnitt
 PORT = 5000      # Porten vi lyssnar på
 
+# --- Robot Name Mapping ---
+ROBOT_NAMES = {
+    "100": "Robot1",
+    "101": "Robot2"
+}
+
+def get_robot_name(ip_address):
+    """Kollar på sista delen av IP-adressen och returnerar ett namn."""
+    last_octet = ip_address.split('.')[-1]
+    if last_octet in ROBOT_NAMES:
+        return f"{ROBOT_NAMES[last_octet]} ({ip_address})"
+    return ip_address
+
 # 1. Ladda in JSON-filen i minnet innan servern startar
 state_dictionary = {}
 try:
@@ -35,11 +48,17 @@ def start_server():
         while True:
             # Vänta på anslutning
             conn, addr = s.accept()
+            raw_ip = addr[0]
+            
+            # --- Skapa robotens namn baserat på IP ---
+            robot_name = get_robot_name(raw_ip)
+            
             with conn:
-                print(f"\n--- Ansluten till robot: {addr} ---", flush=True)
+                print(f"\n--- Ansluten till: {robot_name} ---", flush=True)
                 while True:
                     data = conn.recv(1024)
                     if not data:
+                        print(f"\n--- {robot_name} kopplade från ---", flush=True)
                         break
                     
                     # Avkoda och rensa meddelandet
@@ -61,24 +80,24 @@ def start_server():
                                 # Slå upp den översatta texten i JSON-ordboken
                                 meaning = state_dictionary.get((select_code, value), "Okänd status")
                                 
-                                print(f"[INFO] Kod: {select_code} | Värde: {value} --> {meaning}", flush=True)
+                                print(f"[{robot_name}] Kod: {select_code} | Värde: {value} --> {meaning}", flush=True)
                             else:
-                                print(f"[Rådata STATE]: {incoming_msg}", flush=True)
+                                print(f"[{robot_name}] [Rådata STATE]: {incoming_msg}", flush=True)
 
                         # ----------------------------------------------------
                         # SCENARIO 2: Roboten skickar ett FEL (ERROR)
                         # ----------------------------------------------------
                         elif " ERROR " in incoming_msg:
-                            print(f"\n*** [LARM] {incoming_msg} ***\n", flush=True)
+                            print(f"\n*** [{robot_name}] [LARM] {incoming_msg} ***\n", flush=True)
                             
                         # ----------------------------------------------------
                         # SCENARIO 3: Något annat okänt meddelande
                         # ----------------------------------------------------
                         else:
-                            print(f"[Okänt meddelande]: {incoming_msg}", flush=True)
+                            print(f"[{robot_name}] [Okänt meddelande]: {incoming_msg}", flush=True)
 
                     else:
-                        print("Mottog ett tomt meddelande.", flush=True)
+                        print(f"[{robot_name}] Mottog ett tomt meddelande.", flush=True)
 
 if __name__ == "__main__":
     try:
