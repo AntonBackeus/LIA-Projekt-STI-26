@@ -2,32 +2,23 @@
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 
 -- ----------------------------
--- Metadata Table
+-- Time-series table
 -- ----------------------------
-CREATE TABLE IF NOT EXISTS component (
-    component_id BIGSERIAL PRIMARY KEY,
-    serial_number TEXT NOT NULL UNIQUE,
-    model TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- ----------------------------
--- Time-Series Table
--- ----------------------------
-CREATE TABLE IF NOT EXISTS event_data (
+CREATE TABLE IF NOT EXISTS robot_status_events (
     ts TIMESTAMPTZ NOT NULL,
-    component_id BIGINT NOT NULL,
-    temperature DOUBLE PRECISION,
-    humidity DOUBLE PRECISION
---    CONSTRAINT fk_component
---        FOREIGN KEY(component_id)
---        REFERENCES component(component_id)
---        ON DELETE CASCADE
+    robot_address TEXT NOT NULL,
+    raw_message TEXT,
+    enriched_data JSONB
 );
+-- ----------------------------
+-- Convert to hypertable
+-- ----------------------------
 
 -- Convert to hypertable
-SELECT create_hypertable('event_data', 'ts', if_not_exists => TRUE);
+SELECT create_hypertable('robot_status_events', 'ts', if_not_exists => TRUE);
 
 -- Helpful index
-CREATE INDEX IF NOT EXISTS idx_event_component_time
-ON event_data (component_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_robot_device_time
+ON robot_status_events (robot_address, ts DESC);
+
+

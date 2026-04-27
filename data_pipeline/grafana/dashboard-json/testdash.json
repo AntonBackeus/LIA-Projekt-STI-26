@@ -110,7 +110,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts, humidity, temperature FROM  event_data WHERE component_id = 1;",
+          "rawSql": "SELECT ts, event_value, event_state, error_code FROM robot_status_events WHERE device_id = 1;",
           "refId": "A",
           "sql": {
             "columns": [

@@ -16,7 +16,7 @@ PORT = 5000
 
 # Database connection parameters from .env
 DB_NAME = os.getenv("DB_NAME", "mqtt_data")
-DB_USER = os.getenv("DB_USER", "postgres")
+DB_USER = os.getenv("DB_USER", "admin")
 DB_PASSWORD = os.getenv("DB_PASS", "password")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
@@ -55,6 +55,7 @@ def init_db_pool():
         print("Database connection pool initialized successfully.", flush=True)
     except psycopg2.Error as e:
         print(f"CRITICAL: Failed to initialize database pool: {e}", flush=True)
+        exit(1)
 
 def load_json_lookups():
     """Loads JSON dictionaries into memory."""
