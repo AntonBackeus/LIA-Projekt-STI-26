@@ -110,7 +110,8 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts, event_value, event_state, error_code FROM robot_status_events WHERE device_id = 1;",
+          "rawSql": "SELECT\n  ts AS \"time\",\n  (enriched_data->>'Temperature')::float AS temperature,\n  (enriched_data->>'Humidity')::float AS humidity\nFROM robot_status_events\nWHERE\n  $__timeFilter(ts) AND\n  enriched_data->>'Type' = 'SENSOR_READING'\nORDER BY 1",
+
           "refId": "A",
           "sql": {
             "columns": [

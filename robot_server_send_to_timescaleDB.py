@@ -8,7 +8,8 @@ import threading
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+dotenv_path = os.path.join(os.path.dirname(__file__), 'data_pipeline', '.env')
+load_dotenv(dotenv_path=dotenv_path)
 
 # --- Configuration ---
 HOST = '0.0.0.0'

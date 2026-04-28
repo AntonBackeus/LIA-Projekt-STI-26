@@ -26,7 +26,7 @@ services:
     build: ./etl
     container_name: etl
     environment:
-      DB_HOST: ${DB_HOST}
+      DB_HOST: timescaledb
       DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
