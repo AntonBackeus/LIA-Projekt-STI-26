@@ -2,7 +2,6 @@ import socket
 import json
 import re
 import threading
-import time  
 
 # Konfiguration
 HOST = '0.0.0.0' 
@@ -42,17 +41,10 @@ def handle_client(conn, robot_name):
         print(f"\n--- Ansluten till: {robot_name} ---", flush=True)
         while True:
             try:
-                last_data_time = time.time()
                 data = conn.recv(1024)
-                if data:
-                    last_data_time = time.time()
-                else:
-                    elapsed_time = time.time() - last_data_time
-
-                    if elapsed_time > 11:
-                        print(f"\n--- {robot_name} kopplade från (ingen data på 11 sekunder) ---", flush=True)
+                if not data:
+                    print(f"\n--- {robot_name} kopplade från ---", flush=True)
                     break
-                    
                 
                 # Avkoda och rensa meddelandet
                 incoming_msg = data.decode('utf-8').strip()
