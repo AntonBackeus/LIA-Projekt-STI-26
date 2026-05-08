@@ -1,0 +1,33 @@
+/* Add some custom styles for status cards */
+.status-card {
+  border-left: 5px solid var(--pico-muted-border-color);
+  transition: border-color 0.3s ease;
+}
+
+.status-card.running {
+  border-left-color: var(--pico-color-green-500);
+}
+
+.status-card.manual {
+  border-left-color: var(--pico-color-amber-500);
+}
+
+.status-card.error {
+  border-left-color: var(--pico-color-orange-500);
+}
+
+.status-card.fatal {
+  border-left-color: var(--pico-color-red-600);
+  animation: pulse 1.5s infinite;
+}
+
+.error-card {
+    background-color: var(--pico-form-element-invalid-background-color);
+    border-color: var(--pico-form-element-invalid-border-color);
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}

@@ -1,0 +1,317 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Dashboard for monitoring Omron Robot events from the robot_server.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 3,
+  "links": [],
+  "liveNow": true,
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P90F691777F0F6697"
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 16,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "P90F691777F0F6697"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  ts AS \"time\",\n  enriched_data->>'Meaning' AS \"Meaning\",\n  enriched_data->>'Category' AS \"Category\",\n  raw_message AS \"Raw Message\"\nFROM robot_status_events\nWHERE\n  $__timeFilter(ts) AND\n  ($__robot_address_all OR robot_address = '${robot:csv}') AND\n  enriched_data->>'Type' != 'SENSOR_READING'\nORDER BY ts DESC\nLIMIT 500",
+          "refId": "A"
+        }
+      ],
+      "title": "Live Robot Event Log",
+      "type": "logs"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P90F691777F0F6697"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "P90F691777F0F6697"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  time_bucket('1m', ts) AS \"time\",\n  enriched_data->>'Category' AS metric,\n  COUNT(*)\nFROM robot_status_events\nWHERE\n  $__timeFilter(ts) AND\n  ($__robot_address_all OR robot_address = '${robot:csv}') AND\n  enriched_data->>'Type' = 'ERROR'\nGROUP BY 1, 2\nORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Robot Error Counts by Category",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "P90F691777F0F6697"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Category"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 140
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "11.1.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "P90F691777F0F6697"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  Category,\n  Meaning,\n  \"time\"\nFROM (\n  SELECT\n    DISTINCT ON (enriched_data->>'Category')\n    ts AS \"time\",\n    enriched_data->>'Category' as \"Category\",\n    enriched_data->>'Meaning' as \"Meaning\"\n  FROM robot_status_events\n  WHERE\n    $__timeFilter(ts) AND\n    ($__robot_address_all OR robot_address = '${robot:csv}') AND\n    enriched_data->>'Type' = 'STATE'\n  ORDER BY\n    enriched_data->>'Category', ts DESC\n) AS latest_states\nORDER BY Category",
+          "refId": "A"
+        }
+      ],
+      "title": "Current Robot Status",
+      "type": "table"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "tags": [
+    "omron",
+    "robot"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "P90F691777F0F6697"
+        },
+        "definition": "SELECT DISTINCT robot_address FROM robot_status_events WHERE enriched_data->>'Type' != 'SENSOR_READING' ORDER BY robot_address",
+        "description": "Select a robot to view its specific data.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Robot",
+        "multi": false,
+        "name": "robot",
+        "options": [],
+        "query": {
+          "query": "SELECT DISTINCT robot_address FROM robot_status_events WHERE enriched_data->>'Type' != 'SENSOR_READING' ORDER BY robot_address",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "current": {},
+        "hide": 2,
+        "name": "__robot_address_all",
+        "options": [
+          {
+            "selected": true,
+            "text": "true",
+            "value": "true"
+          },
+          {
+            "selected": false,
+            "text": "false",
+            "value": "false"
+          }
+        ],
+        "query": "true,false",
+        "skipUrlSync": true,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Omron Robot Monitor",
+  "uid": "omron-robot-monitor-main",
+  "version": 1,
+  "weekStart": ""
+}
