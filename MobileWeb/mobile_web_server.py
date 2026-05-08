@@ -95,4 +95,4 @@ def get_robot_errors():
 if __name__ == '__main__':
     init_db_pool()
     # Host 0.0.0.0 makes it accessible on your local network
-    app.run(host='0.0.0.0', port=80)
+    app.run(host='0.0.0.0', port=5001)
