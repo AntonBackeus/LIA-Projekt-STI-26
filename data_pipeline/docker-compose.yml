@@ -40,6 +40,9 @@ services:
     container_name: grafana
     env_file:
       - ./.env
+    environment:
+      - DB_HOST=timescaledb
+      - DB_NAME=${DB_NAME}
     restart: unless-stopped
     depends_on:
       timescaledb:

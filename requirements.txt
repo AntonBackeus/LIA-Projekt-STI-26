@@ -1,0 +1,4 @@
+psycopg2-binary
+Flask
+Flask-Cors
+python-dotenv
