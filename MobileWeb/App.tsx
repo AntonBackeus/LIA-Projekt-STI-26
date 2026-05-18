@@ -1,77 +1,50 @@
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface RobotData {
-  Value?: number;
-  Meaning?: string;
-}
-
-interface RobotStatus {
+interface CombinedRobotData {
   robot_address: string;
-  ts: string;
-  enriched_data: RobotData;
-}
-
-interface RobotError {
-  robot_address: string;
-  enriched_data?: {
+  status_data?: {
+    Value?: number;
     Meaning?: string;
   };
+  status_ts?: string;
+  error_data?: {
+    Meaning?: string;
+  };
+  error_ts?: string;
 }
 
-const MOCK_STATUSES: RobotStatus[] = [
-  {
-    robot_address: "Robot_01",
-    ts: new Date().toISOString(),
-    enriched_data: { Value: 4, Meaning: "Normal Operation" }
-  },
-  {
-    robot_address: "Robot_02",
-    ts: new Date().toISOString(),
-    enriched_data: { Value: 1, Meaning: "Emergency Stop" }
-  }
-];
-
-const MOCK_ERRORS: RobotError[] = [
-  {
-    robot_address: "Robot_02",
-    enriched_data: { Meaning: "Joint 3 torque limit exceeded" }
-  }
-];
-
 export default function App() {
-  const [statuses, setStatuses] = useState<RobotStatus[]>(MOCK_STATUSES);
-  const [errors, setErrors] = useState<RobotError[]>(MOCK_ERRORS);
+  const [robots, setRobots] = useState<CombinedRobotData[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsRefreshing(true);
       try {
-        const [statusRes, errorRes] = await Promise.all([
-          fetch('/api/status').catch(() => null),
-          fetch('/api/errors').catch(() => null)
-        ]);
-
-        if (statusRes && statusRes.ok) {
-          const data = await statusRes.json();
-          setStatuses(data);
-        }
-        
-        if (errorRes && errorRes.ok) {
-          const data = await errorRes.json();
-          setErrors(data);
+        const response = await fetch('/api/Status_and_errors');
+        if (response.ok) {
+          const data: CombinedRobotData[] = await response.json();
+          setRobots(data);
+          if (isOffline) setIsOffline(false);
+        } else {
+          // Handle server errors (e.g., 500)
+          if (!isOffline) setIsOffline(true);
         }
       } catch (err) {
-        console.error("Link offline");
+        // Handle network errors (e.g., server is down)
+        console.error("API connection failed:", err);
+        if (!isOffline) setIsOffline(true);
       } finally {
         setTimeout(() => setIsRefreshing(false), 500);
       }
     };
 
+    fetchData(); // Initial fetch
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isOffline]);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans p-4">
@@ -79,11 +52,10 @@ export default function App() {
       
       <div className="max-w-md mx-auto space-y-6">
         <AnimatePresence mode="popLayout">
-          {statuses.map((robot) => {
-            const data = robot.enriched_data || {};
-            const isOn = (data.Value || 0) >= 3;
-            const robotError = errors.find(e => e.robot_address === robot.robot_address);
-            
+          {robots.map((robot) => {
+            const statusData = robot.status_data || {};
+            const isOn = (statusData.Value || 0) >= 3;
+            const lastUpdate = robot.status_ts || robot.error_ts;
             return (
               <motion.div
                 key={robot.robot_address}
@@ -104,18 +76,18 @@ export default function App() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-[10px] uppercase font-bold opacity-60 mb-0.5">Current State</p>
-                    <p className="font-semibold leading-snug">{data.Meaning || 'Unknown State'}</p>
+                    <p className="font-semibold leading-snug">{statusData.Meaning || 'Awaiting Data...'}</p>
                   </div>
 
                   <div className="flex justify-between items-center opacity-70 text-[11px] font-bold">
                     <span>Last Update:</span>
-                    <span>{new Date(robot.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                    <span>{lastUpdate ? new Date(lastUpdate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : '--:--'}</span>
                   </div>
 
-                  {robotError && (
+                  {robot.error_data && (
                     <div className="mt-4 bg-red-700 text-white rounded-lg p-3 shadow-inner">
                       <p className="text-sm font-bold">
-                        ERROR: <span className="font-medium opacity-90">{robotError.enriched_data?.Meaning || 'System fault detected'}</span>
+                        ERROR: <span className="font-medium opacity-90">{robot.error_data.Meaning || 'System fault detected'}</span>
                       </p>
                     </div>
                   )}
@@ -125,6 +97,16 @@ export default function App() {
           })}
         </AnimatePresence>
       </div>
+      
+      <AnimatePresence>
+        {isOffline && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold py-2 px-6 rounded-full shadow-lg">Connection to Server Lost</motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
