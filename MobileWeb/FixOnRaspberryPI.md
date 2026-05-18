@@ -29,20 +29,14 @@ This will start TimescaleDB on port `5432` and Grafana on port `3000`.
 
 **B. Install Python Dependencies:**
 
-It's recommended to use a virtual environment. You will need to install packages like `psycopg2-binary`, `flask`, `flask-cors`, and `python-dotenv`.
+On the Raspberry Pi, you can install the required packages globally.
 
 ```bash
 # Navigate to the project root
-python -m venv venv
 
-# Activate the virtual environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-
-# Install required packages (assuming a requirements.txt file)
-pip install psycopg2-binary flask flask-cors python-dotenv
+# Install required packages globally using sudo
+# The --break-system-packages flag is required on recent Raspberry Pi OS versions
+sudo pip3 install -r requirements.txt --break-system-packages
 ```
 
 **C. Run the Backend Servers:**
@@ -93,4 +87,3 @@ To create a more professional setup on a device like a Raspberry Pi, you can use
 3.  Route `http://Grafana.STI` requests to the Grafana instance (running on port 3000).
 
 To make this work, you must also edit the `hosts` file on your client computer to point these domains to the Raspberry Pi's IP address.
-
