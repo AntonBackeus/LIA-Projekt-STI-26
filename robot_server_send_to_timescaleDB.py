@@ -3,6 +3,7 @@ import json
 import os
 import psycopg2
 from psycopg2 import pool
+import re
 from datetime import datetime, timezone
 import threading
 from dotenv import load_dotenv
@@ -167,12 +168,40 @@ def lookup_message(message):
                             elif value_str.lower() == expected_value.lower():
                                 return {"Type": "STATE", "SelectOrCode": select_or_code, "Value": value_str, "Category": item['Category'], "Meaning": item['Meaning']}
 
-                    if STATE_VALUES_BY_SELECT_CODE[select_or_code]:
-                        first_item = STATE_VALUES_BY_SELECT_CODE[select_or_code][0]
-                        return {"Type": "STATE", "SelectOrCode": select_or_code, "Value": value_str, "Category": first_item['Category'], "Meaning": f"Unknown specific value '{value_str}' for {first_item['Category']} (SelectOrCode: {select_or_code})"}
-            except ValueError:
-                pass
+            return {
+                "Type": "STATE",
+                "SelectOrCode": select_or_code,
+                "Value": int(value_str) if value_str.isdigit() else value_str, # Store as int if possible
+                "Category": category_from_log, # Use category from log
+                "Meaning": meaning_from_json # Use meaning from JSON if found, else fallback
+            }
+        except ValueError:
+            pass # Fall through to RAW if parsing fails
 
+    # New logic: Try to parse as the "ERROR Code X Category Y Message Z" log format
+    error_match = re.search(r"ERROR\s+Code\s+(-?\d+)\s+Category\s+(.*?)\s+Message\s+(.*)", message, re.IGNORECASE)
+    if error_match:
+        code_str = error_match.group(1)
+        category_from_log = error_match.group(2).strip()
+        message_from_log = error_match.group(3).strip()
+
+        try:
+            code_int = int(code_str)
+            # Use error_code.json for a more formal 'Message' if available
+            meaning_from_json = message_from_log
+            if code_int in ERROR_CODES_LOOKUP:
+                meaning_from_json = ERROR_CODES_LOOKUP[code_int]['Message']
+
+            return {
+                "Type": "ERROR",
+                "Code": code_int,
+                "Category": category_from_log, # Use category from log
+                "Meaning": meaning_from_json # Use meaning from JSON if found, else fallback
+            }
+        except ValueError:
+            pass
+
+    # If no specific parsing works, return RAW
     return {"Type": "RAW", "Meaning": message, "Category": "Uncategorized"}
 
 def handle_client(client_socket, raw_ip):
@@ -187,18 +216,20 @@ def handle_client(client_socket, raw_ip):
                 if not data:
                     break # Client disconnected
                 
-                error_msg = data.decode('utf-8').strip()
+                # Decode and split by lines, then process each line individually
+                messages = data.decode('utf-8').strip().split('\r\n')
                 
-                if error_msg:
-                    enriched_data_dict = lookup_message(error_msg)
-                    enriched_json_string = json.dumps(enriched_data_dict)
+                for message_line in messages:
+                    if message_line: # Process only non-empty lines
+                        enriched_data_dict = lookup_message(message_line)
+                        
+                        print(f"Received from {robot_name}: '{message_line}'", flush=True)
+                        print(f"Interpreted JSON: {json.dumps(enriched_data_dict)}", flush=True)
+                        
+                        insert_robot_status(robot_name, message_line, enriched_data_dict)
+                    else:
+                        print(f"Received an empty message line from {robot_name}.", flush=True)
                     
-                    print(f"Received from {robot_name}: '{error_msg}'", flush=True)
-                    print(f"Interpreted JSON: {enriched_json_string}", flush=True)
-                    
-                    insert_robot_status(robot_name, error_msg, enriched_json_string)
-                else:
-                    print(f"Received an empty message from {robot_name}.", flush=True)
                     
             except ConnectionResetError:
                 print(f"Connection reset by {robot_name}.", flush=True)
