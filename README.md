@@ -22,6 +22,14 @@ Email: raspberrysti1@gmail.com
 Password: STIraspberrystu1
 
 ---
+### Länkar
+Så länge din dator är ansluten till STI wifi då kan du nå systemet via dessa länkar i din webbläsare:
+* **Mobil Webbapp:** http://robotserver.local
+* **Grafana:** http://robotserver.local:3000 (Standardinloggning: admin / grafana)
+
+
+
+
 
 ## Lathund för att hantera systemet
 
@@ -100,7 +108,3 @@ Om du gör ändringar i domäninställningarna måste Nginx startas om för att 
 sudo systemctl restart nginx
 ```
 
-### 4. Länkar till systemet
-Så länge din dator är ansluten till samma WiFi-nätverk som Raspberry Pi kan du nå systemet via dessa länkar i din webbläsare:
-* **Mobil Webbapp:** http://robotserver.local
-* **Grafana:** http://robotserver.local:3000 (Standardinloggning: admin / grafana)
