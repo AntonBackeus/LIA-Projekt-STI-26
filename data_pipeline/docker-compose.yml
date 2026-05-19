@@ -3,6 +3,7 @@ services:
     image: timescale/timescaledb:2.19.3-pg14
     platform: Linux/Arm64
     container_name: timescaledb
+    restart: unless-stopped
     ports:
       - ${DB_PORT}:${DB_PORT}
     environment:

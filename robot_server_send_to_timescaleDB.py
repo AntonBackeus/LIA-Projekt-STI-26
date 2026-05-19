@@ -94,12 +94,14 @@ def get_db_connection_from_pool():
         print(f"Error getting connection from pool: {e}", flush=True)
         return None
 
-def insert_robot_status(robot_address, raw_message, enriched_json_data):
+def insert_robot_status(robot_address, raw_message, enriched_data_dict):
     """Inserts the translated event into TimescaleDB."""
     conn = None
     try:
         conn = get_db_connection_from_pool()
         if conn is None: return
+        
+        enriched_json_string = json.dumps(enriched_data_dict)
         
         with conn.cursor() as cursor:
             cursor.execute(
@@ -107,7 +109,7 @@ def insert_robot_status(robot_address, raw_message, enriched_json_data):
                 INSERT INTO robot_status_events (ts, robot_address, raw_message, enriched_data)
                 VALUES (%s, %s, %s, %s);
                 """,
-                (datetime.now(timezone.utc), robot_address, raw_message, enriched_json_data)
+                (datetime.now(timezone.utc), robot_address, raw_message, enriched_json_string)
             )
             conn.commit()
     except psycopg2.Error as e:
@@ -168,15 +170,37 @@ def lookup_message(message):
                             elif value_str.lower() == expected_value.lower():
                                 return {"Type": "STATE", "SelectOrCode": select_or_code, "Value": value_str, "Category": item['Category'], "Meaning": item['Meaning']}
 
-            return {
-                "Type": "STATE",
-                "SelectOrCode": select_or_code,
-                "Value": int(value_str) if value_str.isdigit() else value_str, # Store as int if possible
-                "Category": category_from_log, # Use category from log
-                "Meaning": meaning_from_json # Use meaning from JSON if found, else fallback
-            }
-        except ValueError:
-            pass # Fall through to RAW if parsing fails
+                return {
+                    "Type": "STATE",
+                    "SelectOrCode": select_or_code,
+                    "Value": int(value_str) if value_str.isdigit() else value_str, # Store as int if possible
+                    "Category": "Uncategorized", 
+                    "Meaning": f"Unknown value '{value_str}' for SelectOrCode {select_or_code}"
+                }
+            except ValueError:
+                pass # Fall through to RAW if parsing fails
+
+    # New logic: Try to parse as the "STATE SelectOrCode X Category Y Value Z" log format
+    state_match = re.search(r"STATE\s+SelectOrCode\s+(\d+)\s+Category\s+(.*?)\s+Value\s+(\S+)", message, re.IGNORECASE)
+    if state_match:
+        select_or_code = int(state_match.group(1))
+        category_from_log = state_match.group(2).strip()
+        value_str = state_match.group(3).strip()
+        meaning_from_json = f"Unknown specific value '{value_str}' for {category_from_log} (SelectOrCode: {select_or_code})"
+
+        if select_or_code in STATE_VALUES_BY_SELECT_CODE:
+            for item in STATE_VALUES_BY_SELECT_CODE[select_or_code]:
+                if str(item.get('Value')).lower() == value_str.lower():
+                    meaning_from_json = item['Meaning']
+                    break
+
+        return {
+            "Type": "STATE",
+            "SelectOrCode": select_or_code,
+            "Value": int(value_str) if value_str.isdigit() else value_str,
+            "Category": category_from_log,
+            "Meaning": meaning_from_json
+        }
 
     # New logic: Try to parse as the "ERROR Code X Category Y Message Z" log format
     error_match = re.search(r"ERROR\s+Code\s+(-?\d+)\s+Category\s+(.*?)\s+Message\s+(.*)", message, re.IGNORECASE)
