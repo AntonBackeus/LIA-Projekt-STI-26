@@ -209,7 +209,7 @@ sudo systemctl status robot-tcp-server.service robot-web-server.service
 
 ---
 
-### Step 7: Final Client-Side Configuration
+### Step 8: Final Client-Side Configuration
 
 1.  Find your Raspberry Pi's IP address by running `ip a` in the terminal.
 2.  On your **personal computer** (not the Pi), edit your `hosts` file to map the domains to the Pi's IP.

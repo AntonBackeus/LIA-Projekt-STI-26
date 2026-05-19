@@ -51,6 +51,14 @@ export default function App() {
       <h1 className="text-3xl font-bold text-center mb-8 text-slate-800">Omron Status Monitor</h1>
       
       <div className="max-w-md mx-auto space-y-6">
+        {robots.length === 0 && !isOffline && (
+          <div className="text-center py-10 px-6 bg-slate-100 rounded-xl shadow-sm">
+            <p className="font-semibold text-slate-600">Awaiting Data</p>
+            <p className="text-sm text-slate-400 mt-1">
+              No robot data has been received. Make sure robots are connected and sending data to the TCP server.
+            </p>
+          </div>
+        )}
         <AnimatePresence mode="popLayout">
           {robots.map((robot) => {
             const statusData = robot.status_data || {};
