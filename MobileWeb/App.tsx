@@ -14,8 +14,13 @@ interface CombinedRobotData {
   error_ts?: string;
 }
 
+const DEFAULT_ROBOTS: CombinedRobotData[] = [
+  { robot_address: "Robot_1", status_data: { Value: 0, Meaning: "Offline" } },
+  { robot_address: "Robot_2", status_data: { Value: 0, Meaning: "Offline" } }
+];
+
 export default function App() {
-  const [robots, setRobots] = useState<CombinedRobotData[]>([]);
+  const [robots, setRobots] = useState<CombinedRobotData[]>(DEFAULT_ROBOTS);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
@@ -26,7 +31,11 @@ export default function App() {
         const response = await fetch('/api/Status_and_errors');
         if (response.ok) {
           const data: CombinedRobotData[] = await response.json();
-          setRobots(data);
+          const mergedRobots = DEFAULT_ROBOTS.map(defaultRobot => {
+            const liveData = data.find(r => r.robot_address.startsWith(defaultRobot.robot_address));
+            return liveData || defaultRobot;
+          });
+          setRobots(mergedRobots);
           if (isOffline) setIsOffline(false);
         } else {
           // Handle server errors (e.g., 500)
@@ -51,16 +60,8 @@ export default function App() {
       <h1 className="text-3xl font-bold text-center mb-8 text-slate-800">Omron Status Monitor</h1>
       
       <div className="max-w-md mx-auto space-y-6">
-        {robots.length === 0 && !isOffline && (
-          <div className="text-center py-10 px-6 bg-slate-100 rounded-xl shadow-sm">
-            <p className="font-semibold text-slate-600">Awaiting Data</p>
-            <p className="text-sm text-slate-400 mt-1">
-              No robot data has been received. Make sure robots are connected and sending data to the TCP server.
-            </p>
-          </div>
-        )}
         <AnimatePresence mode="popLayout">
-          {robots.map((robot) => {
+          {robots.map((robot: CombinedRobotData) => {
             const statusData = robot.status_data || {};
             const isOn = (statusData.Value || 0) >= 3;
             const lastUpdate = robot.status_ts || robot.error_ts;

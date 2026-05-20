@@ -4,7 +4,8 @@ import os
 import psycopg2
 from psycopg2 import pool
 import re
-from datetime import datetime, timezone
+import time
+from datetime import datetime, timezone, timedelta
 import threading
 from dotenv import load_dotenv
 
@@ -25,10 +26,16 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 
 db_pool = None
 
+# --- Connection Monitoring ---
+last_seen = {}
+connection_status = {}
+lock = threading.Lock()
+HEARTBEAT_TIMEOUT = 30 # seconds
+
 # --- Robot Name Mapping ---
 ROBOT_NAMES = {
-    "100": "Robot1",
-    "101": "Robot2"
+    "100": "Robot_1",
+    "101": "Robot_2"
 }
 
 def get_robot_name(ip_address):
@@ -232,8 +239,12 @@ def handle_client(client_socket, raw_ip):
     """Handles communication with a single connected robot."""
     robot_name = get_robot_name(raw_ip)
     
-    with client_socket:
+    with lock:
+        last_seen[robot_name] = datetime.now(timezone.utc)
+        connection_status[robot_name] = 'connected'
         print(f"Connected to: {robot_name}", flush=True)
+
+    with client_socket:
         while True:
             try:
                 data = client_socket.recv(1024)
@@ -247,6 +258,13 @@ def handle_client(client_socket, raw_ip):
                     if message_line: # Process only non-empty lines
                         enriched_data_dict = lookup_message(message_line)
                         
+                        # Update the last_seen timestamp for this robot
+                        with lock:
+                            last_seen[robot_name] = datetime.now(timezone.utc)
+                            if connection_status.get(robot_name) == 'disconnected':
+                                print(f"{robot_name} has reconnected.", flush=True)
+                                connection_status[robot_name] = 'connected'
+
                         print(f"Received from {robot_name}: '{message_line}'", flush=True)
                         print(f"Interpreted JSON: {json.dumps(enriched_data_dict)}", flush=True)
                         
@@ -261,12 +279,38 @@ def handle_client(client_socket, raw_ip):
             except Exception as e:
                 print(f"Error handling data from {robot_name}: {e}", flush=True)
                 break
-                
-        print(f"{robot_name} disconnected.", flush=True)
+    
+    # When the client loop breaks, we don't do anything here.
+    # The monitoring thread will handle the timeout.
+    print(f"Socket closed for {robot_name}. Awaiting timeout or reconnect.", flush=True)
+
+def monitor_connections():
+    """Periodically checks for disconnected robots and updates their status."""
+    while True:
+        time.sleep(5) # Check every 5 seconds
+        with lock:
+            # Use list() to avoid "dictionary changed size during iteration" error
+            for robot_name, last_seen_time in list(last_seen.items()):
+                if connection_status.get(robot_name) == 'connected':
+                    if (datetime.now(timezone.utc) - last_seen_time).total_seconds() > HEARTBEAT_TIMEOUT:
+                        print(f"Heartbeat timeout for {robot_name}. Inserting final 'OFF' status.", flush=True)
+                        disconnected_status = {
+                            "Type": "STATE",
+                            "SelectOrCode": 1,
+                            "Value": 0,
+                            "Category": "Robot State",
+                            "Meaning": "Offline"
+                        }
+                        insert_robot_status(robot_name, "DISCONNECTED_TIMEOUT", disconnected_status)
+                        connection_status[robot_name] = 'disconnected'
 
 def start_server():
     load_json_lookups()
     init_db_pool() # Initialize the DB connections BEFORE accepting clients
+
+    monitor_thread = threading.Thread(target=monitor_connections, daemon=True)
+    monitor_thread.start()
+    print("Connection monitoring thread started.", flush=True)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
